@@ -16,7 +16,7 @@ var Notifications = {
 	onRegister: false,
 	onError: false,
 	onNotification: false,
-  onRemoteFetch: false,
+	onRemoteFetch: false,
 	isLoaded: false,
 	hasPoppedInitialNotification: false,
 
@@ -32,7 +32,7 @@ var Notifications = {
 Notifications.callNative = function(name: String, params: Array) {
 	if ( typeof this.handler[name] === 'function' ) {
 		if ( typeof params !== 'array' &&
-			 typeof params !== 'object' ) {
+			typeof params !== 'object' ) {
 			params = [];
 		}
 
@@ -89,7 +89,7 @@ Notifications.configure = function(options: Object) {
 	}
 
 	if ( this.hasPoppedInitialNotification === false &&
-			( options.popInitialNotification === undefined || options.popInitialNotification === true ) ) {
+		( options.popInitialNotification === undefined || options.popInitialNotification === true ) ) {
 		this.popInitialNotification(function(firstNotification) {
 			if ( firstNotification !== null ) {
 				this._onNotification(firstNotification, true);
@@ -155,37 +155,33 @@ Notifications.localNotification = function(details: Object) {
  */
 Notifications.localNotificationSchedule = function(details: Object) {
 	if ( Platform.OS === 'ios' ) {
+
 		let soundName = details.soundName ? details.soundName : 'default'; // play sound (and vibrate) as default behaviour
 
 		if (details.hasOwnProperty('playSound') && !details.playSound) {
 			soundName = ''; // empty string results in no sound (and no vibration)
 		}
 
-		const iosDetails = {
+		this.handler.scheduleLocalNotification({
 			fireDate: details.date.toISOString(),
 			alertBody: details.message,
 			soundName: soundName,
+			applicationIconBadgeNumber: parseInt(details.number, 10),
 			userInfo: details.userInfo,
 			repeatInterval: details.repeatType
-		};
-
-		if(details.number) {
-			iosDetails.applicationIconBadgeNumber = parseInt(details.number, 10);
-		}
-
-		// ignore Android only repeatType
-		if (!details.repeatType || details.repeatType === 'time') {
-			delete iosDetails.repeatInterval;
-		}
-		this.handler.scheduleLocalNotification(iosDetails);
+		});
 	} else {
 		details.fireDate = details.date.getTime();
 		delete details.date;
-		// ignore iOS only repeatType
-		if (['year', 'month'].includes(details.repeatType)) {
-			delete details.repeatType;
-		}
 		this.handler.scheduleLocalNotification(details);
+	}
+};
+
+Notifications.cancelLocalNotifications = function(details) {
+	if ( Platform.OS === 'ios' ) {
+		this.handler.cancelLocalNotifications(details);
+	} else {
+		this.callNative('cancelLocalNotifications', arguments);
 	}
 };
 
@@ -222,15 +218,13 @@ Notifications._onNotification = function(data, isFromBackground = null) {
 				data: data.getData(),
 				badge: data.getBadgeCount(),
 				alert: data.getAlert(),
-				sound: data.getSound(),
-  			finish: (res) => data.finish(res)
+				sound: data.getSound()
 			});
 		} else {
 			var notificationData = {
 				foreground: ! isFromBackground,
-  			finish: () => {},
 				...data
-			};
+		};
 
 			if ( typeof notificationData.data === 'string' ) {
 				try {
@@ -256,8 +250,8 @@ Notifications._requestPermissions = function() {
 		if ( this.isPermissionsRequestPending === false ) {
 			this.isPermissionsRequestPending = true;
 			return this.callNative( 'requestPermissions', [ this.permissions ])
-							.then(this._onPermissionResult.bind(this))
-							.catch(this._onPermissionResult.bind(this));
+				.then(this._onPermissionResult.bind(this))
+				.catch(this._onPermissionResult.bind(this));
 		}
 	} else if ( typeof this.senderID !== 'undefined' ) {
 		return this.callNative( 'requestPermissions', [ this.senderID ]);
@@ -280,10 +274,6 @@ Notifications.presentLocalNotification = function() {
 
 Notifications.scheduleLocalNotification = function() {
 	return this.callNative('scheduleLocalNotification', arguments);
-};
-
-Notifications.cancelLocalNotifications = function() {
-	return this.callNative('cancelLocalNotifications', arguments);
 };
 
 Notifications.cancelAllLocalNotifications = function() {
